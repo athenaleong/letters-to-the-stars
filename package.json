@@ -1,0 +1,16 @@
+{
+  "name": "stars",
+  "version": "1.0.0",
+  "description": "",
+  "main": "js/example.js",
+  "dependencies": {
+    "three": "^0.130.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+    
+  },
+  "author": "",
+  "license": "ISC"
+}

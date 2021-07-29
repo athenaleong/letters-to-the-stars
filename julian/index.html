@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="css/main.css">
+    <title>Yay</title>
+</head>
+
+
+<body>
+
+<script src="js/three.js"></script>
+<script>
+
+/** 
+ * Class that handles translation based on mouse input 
+ **/
+class MouseControl {
+
+    /**
+     * constructor
+     * @param {THREE.WebGLRenderer} renderer
+     * @param {Tuple[float,float]} init_translate (optional)
+     *      - Initial translate ratio before mouse input.
+     *        Default [0.5, 0.5] (center)
+     * @param {float} init_wheel (optional)
+     *      - Initial wheel before mouse input
+     *        Default 0
+     */
+    constructor(renderer, init_translate=[.5,.5], init_wheel=0) {
+
+        const v2 = new THREE.Vector2( );
+        renderer.getDrawingBufferSize(v2);
+        this.width = v2.x;
+        this.height = v2.y;
+        this.renderer = renderer;
+        
+        this._translate = [
+            this.width *init_translate[0], 
+            this.height*init_translate[1]];
+        this._wheel = 0;
+
+        this._ismousedown = false;
+        this._mousedownpos = [null,null];
+        this._currtranslate = [null,null];
+
+        const self = this;
+        renderer.domElement.addEventListener('mousemove', function (e) {
+            if (self._ismousedown) {
+                self._translate = [
+                    self._currtranslate[0] + e.pageX - self._mousedownpos[0], 
+                    self._currtranslate[1] + e.pageY - self._mousedownpos[1]];
+            }
+        }, false);
+
+        renderer.domElement.addEventListener('mousedown', function (e) {
+            if (!self._ismousedown) {
+                self._mousedownpos = [e.pageX, e.pageY];
+                self._currtranslate = self._translate;
+            }
+            self._ismousedown = true;
+        }, false);
+
+        renderer.domElement.addEventListener('mouseup', function (e) {
+            self._ismousedown = false;
+        }, false);
+
+        renderer.domElement.addEventListener("wheel", function(e) {
+            self._wheel += e.deltaY;
+        }, false);
+    }
+
+    /**
+     * getTranslateXY
+     * @return {Tuple[int,int]} [Translate coordinates scaled to renderer size]
+     */
+    getTranslateXY() {
+        return this._translate;
+    }
+
+    /**
+     * getWheelZ
+     * @return {float} [Wheel coordinates scaled to renderer height]
+     */
+    getWheelZ() {
+        return this._wheel;
+    }
+}
+
+const renderer = new THREE.WebGLRenderer();
+renderer.setClearColor(0xaaaaff);
+renderer.setSize( window.innerWidth, window.innerHeight );
+document.body.appendChild( renderer.domElement );
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 1000 );
+
+var light1 = new THREE.AmbientLight(0xaaaaff, .5);
+var light2 = new THREE.PointLight(0xaaaaff, 1.);
+light2.position.y += 10;
+scene.add(light1);
+scene.add(light2);
+
+const material = new THREE.MeshPhongMaterial();
+
+const geometry = new THREE.BoxGeometry();
+const obj = new THREE.Mesh( geometry, material );
+scene.add(obj);
+
+const control = new MouseControl(renderer); // Init mouse control
+
+const animate = function () {
+    requestAnimationFrame( animate );
+
+    var r = window.innerHeight / window.innerWidth;
+
+    var [tx,ty] = control.getTranslateXY();
+    var tx = tx/control.width - .5; // Scale coordinates for `scene`
+    var ty = ty/control.height - .5;
+    ty *= r
+    camera.position.x = -tx * camera.position.z;
+    camera.position.y =  ty * camera.position.z;
+
+    var zoom = control.getWheelZ();
+    zoom /= control.height;
+    camera.position.z = 5 + zoom;
+
+    renderer.render( scene, camera );
+};
+
+animate();
+
+</script>
+
+</body>
+</html>
