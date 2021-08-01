@@ -2,97 +2,155 @@
 <html>
 	<head>
 		<meta charset="utf-8">
-		<title>My first three.js app</title>
+		<title>three.js app</title>
 		<style>
 			body { margin: 0; }
 		</style>
 	</head>
 	<body>
-        <script src="js/three.js"></script>
-        <script>
-           
-            let mouseX = 0;
-            let mouseY = 0;
-            document.addEventListener("mousemove", (e) => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-            });
- 
-            var scene = new THREE.Scene();
-            var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+        <div id="container"></div>
+        <script type="module">
+            import * as THREE from 'https://unpkg.com/three@0.127.0/build/three.module.js';
+            import { UnrealBloomPass } from 'https://unpkg.com/three@0.127.0/examples/jsm/postprocessing/UnrealBloomPass.js';
+            import { ShaderPass } from 'https://unpkg.com/three@0.127.0/examples/jsm/postprocessing/ShaderPass.js';
+            import { EffectComposer } from 'https://unpkg.com/three@0.127.0/examples/jsm/postprocessing/EffectComposer.js';
+            import { RenderPass } from 'https://unpkg.com/three@0.127.0/examples/jsm/postprocessing/RenderPass.js';
+            // import {GUI} from 'https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.js'
 
-            var renderer = new THREE.WebGLRenderer();
-            renderer.setSize( window.innerWidth, window.innerHeight );
-            document.body.appendChild(renderer.domElement);
-            renderer.setClearColor(new THREE.Color("#1c1624"));
-            var mouse = new THREE.Vector2();
-            var raycaster = new THREE.Raycaster();
+            var scene, camera, renderer, mouse, raycaster, particles
+            var composer, mixer, bloomComposer, finalComposer
+            var bloomPass
 
-            const getRandomParticlePos = () => {
-                return [Math.random() * getFilmHeight, Math.random() * window.innerHeight]
+            // Params for Bloom pass
+            const params = {
+				exposure: 1,
+				bloomStrength: 2,
+				bloomThreshold: 0.5,
+				bloomRadius: 1,
+			};
+
+            const ENTIRE_SCENE = 0, BLOOM_SCENE = 1;
+
+			const bloomLayer = new THREE.Layers();
+			bloomLayer.set( BLOOM_SCENE );
+        
+
+            function init() {
+                initBase();
+                initStars();
+                initPostProcessing();
+                animate();
+            }
+
+            function initBase() {
+
+                //Scene Set up
+                scene = new THREE.Scene();
+                camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+                camera.position.z = 5;
+
+                renderer = new THREE.WebGLRenderer();
+                renderer.setSize( window.innerWidth, window.innerHeight );
+                renderer.setPixelRatio( window.devicePixelRatio );
+                renderer.setClearColor(new THREE.Color("#000000"));
+                document.body.appendChild(renderer.domElement);
+
+                //Raycaster
+                mouse = new THREE.Vector2();
+                raycaster = new THREE.Raycaster();
+                raycaster.params.Points.threshold = 0.1
+
+                // Lights
+                const pointLight = new THREE.PointLight(0xFFFFFF);
+                pointLight.position.x = 0;
+                pointLight.position.y = 0;
+                pointLight.position.z = 0;
+
+                scene.add(pointLight);
+            }
+
+            function initPostProcessing(){
+                //Shader 
+                const renderScene = new RenderPass( scene, camera );
+
+                bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+                //Bloom Pass - resolution, strength, radius, threshold
+                bloomPass.threshold = params.bloomThreshold;
+                bloomPass.strength = params.bloomStrength;
+                bloomPass.radius = params.bloomRadius;
+
+                bloomComposer = new EffectComposer( renderer );
+                // bloomComposer.renderToScreen = false;
+                bloomComposer.addPass( renderScene );
+                bloomComposer.addPass( bloomPass );
+                
+
+            }
+
+            function initStars() {
+                const geometry = new THREE.BufferGeometry()
+                const sprite = new THREE.TextureLoader().load('texture/spark.png')
+
+                const createStars = (numOfStars) => {
+                    const vertices = []
+                    const colors = []
+                    const sizes = []
+
+                    for (let i =0; i < numOfStars; i++) {
+                        const x = Math.random() * 10 - 5
+                        const y = Math.random() * 4 - 2
+                        const z = Math.random() * 100 - 50
+                        const color = new THREE.Color('white').toArray()
+                        vertices.push(x, y, z)
+                        colors.push(...color)
+                    }
+
+                    const colorAttribute = new THREE.Float32BufferAttribute(colors, 3)
+
+                    geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
+                    geometry.setAttribute('color', colorAttribute);
+
+                    const pointMaterial = new THREE.PointsMaterial( {size: 1, map: sprite, vertexColors:true, alphaTest: 0.5} );
+                    particles = new THREE.Points(geometry, pointMaterial);
+                    particles.layers.enable(BLOOM_SCENE)
+                    scene.add(particles)
+                }
+                createStars(100);
+            }
+        
+            function initGUI() {
+                const gui = new dat.GUI();
             }
       
-            const geometry = new THREE.BufferGeometry()
-            const sprite = new THREE.TextureLoader().load('texture/star-autox50.png')
-            const vertices = []
+            var animate = function () {
+                requestAnimationFrame( animate );
+                const intersects = raycaster.intersectObjects(scene.children);
+                if (intersects.length != 0) {
+                    var index = intersects[0].index;
+		            particles.geometry.attributes.color.setXYZ(index, 191, 255, 0)
+                    particles.geometry.attributes.color.needsUpdate = true;
 
-            const createStars = (numOfStars) => {
-
-                for (let i =0; i < numOfStars; i++) {
-                    const x = Math.random() * 10 - 5
-                    const y = Math.random() * 4 - 2
-                    const z = Math.random() * 100 - 50
-
-                    vertices.push(x, y, z)
+                    console.log(intersects[0].object)
                 }
-
-                geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
-                material = new THREE.PointsMaterial( {color:'#FFFF00', size: 0.3, sizeAttenuation: true, map: sprite, alphaTest: 0.5, transparent: true } );
-                const particles = new THREE.Points(geometry, material)
-
-                scene.add(particles)
-            }
+                bloomComposer.render();
+            };
+            
+            window.onresize = function() {
+                var windowHalfX = window.innerWidth / 2;
+                var windowHalfY = window.innerHeight / 2;
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize( window.innerWidth, window.innerHeight );
+        }
 
             const onMouseMove = (event) => {
                 mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
 	            mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
             }
 
-        
-            createStars(1000);
-            camera.position.z = 5;
-
-            //Lights
-            const pointLight = new THREE.PointLight(0xFFFFFF);
-            pointLight.position.x = 10;
-            pointLight.position.y = 50;
-            pointLight.position.z = 130;
-            scene.add(pointLight);
-
-            var animate = function () {
-                requestAnimationFrame( animate );
-                const intersects = raycaster.intersectObjects( scene.children );
-
-	            for ( let i = 0; i < intersects.length; i ++ ) {
-		            intersects[ i ].object.material.color.set(0xff0000);
-	            }
-
-                renderer.render( scene, camera );
-            };
-
-            animate();
-
-            function onWindowResize() {
-
-            windowHalfX = window.innerWidth / 2;
-            windowHalfY = window.innerHeight / 2;
-
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-
-            renderer.setSize( window.innerWidth, window.innerHeight );
-
-            }
+            init();
+            window.addEventListener('mousemove', onMouseMove);
         </script>
 	</body>
 </html>
