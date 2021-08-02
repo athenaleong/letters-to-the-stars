@@ -4,12 +4,12 @@
   "description": "",
   "main": "js/example.js",
   "dependencies": {
+    "dat.gui": "^0.7.7",
     "three": "^0.130.1"
   },
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
-    
   },
   "author": "",
   "license": "ISC"
