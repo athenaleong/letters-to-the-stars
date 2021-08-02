@@ -162,5 +162,6 @@
 
         // Implement camera constraints
         this.camera.position.z = Math.max(0, this.camera.position.z);
+        this.camera.updateProjectionMatrix();
     }
 }
