@@ -29,6 +29,7 @@ function init() {
     initStars();
     initPostProcessing();
     initGUI();
+    
 
     animate();
 }
@@ -37,7 +38,7 @@ function initBase() {
 
     //Scene Set up
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+    camera = new THREE.PerspectiveCamera( 50, window.innerWidth/window.innerHeight, 0.1, 1000 );
     camera.position.z = 5;
 
     renderer = new THREE.WebGLRenderer();
@@ -47,9 +48,11 @@ function initBase() {
     document.body.appendChild(renderer.domElement);
 
     //Raycaster
-    mouse = new THREE.Vector2();
     raycaster = new THREE.Raycaster();
     raycaster.params.Points.threshold = 0.1
+
+    //Mouse Control
+    mouse = new MouseControl(renderer, camera, raycaster);
 
     // Lights
     const pointLight = new THREE.PointLight(0xFFFFFF);
@@ -146,6 +149,7 @@ function initGUI() {
 
 var animate = function () {
     requestAnimationFrame( animate );
+    mouse.updataCamera();
     const intersects = raycaster.intersectObjects(scene.children);
     if (intersects.length != 0) {
         var index = intersects[0].index;
@@ -165,11 +169,11 @@ window.onresize = function() {
     
 }
 
-const onMouseMove = (event) => {
-    mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-    mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-    raycaster.setFromCamera(mouse, camera);
-}
+// const onMouseMove = (event) => {
+//     mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+//     mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+//     raycaster.setFromCamera(mouse, camera);
+// }
 
 init();
-window.addEventListener('mousemove', onMouseMove);
+// window.addEventListener('mousemove', onMouseMove);
