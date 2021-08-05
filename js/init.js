@@ -148,7 +148,7 @@ function initGUI() {
 
 var animate = function () {
     requestAnimationFrame( animate );
-    mouse.updataCamera();
+    mouse.updateCamera();
     const intersects = raycaster.intersectObjects(scene.children);
     if (intersects.length != 0) {
         var index = intersects[0].index;

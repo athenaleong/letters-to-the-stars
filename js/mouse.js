@@ -152,7 +152,6 @@ class MouseControl {
         zoom /= size.y;
         zoom *= this.zoompower;
         
-        this.#updateRaycaster();
         const ray = this.raycaster.ray.direction;
 
         this.camera.position.x += zoom * ray.x;
@@ -166,7 +165,9 @@ class MouseControl {
      * Updates camera according to mouse inputs. 
      * Implementation accounts for skipped frames
      **/
-    updataCamera() {
+    updateCamera() {
+
+        this.#updateRaycaster();
 
         // Implement translation
         if (this.#ismousedown)
