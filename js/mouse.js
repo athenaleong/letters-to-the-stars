@@ -20,19 +20,14 @@ class MouseControl {
     #diffwheel;
     #wheeltimeout; // tracks if wheel is activated
 
-    constructor(renderer, camera, raycaster, zoompower=10, translatepower=1) {
+    constructor(renderer, camera, raycaster, scene, zoompower=10, translatepower=50) {
 
-        const v2 = new THREE.Vector2();
-        renderer.getDrawingBufferSize(v2);
-        this.width = v2.x;
-        this.height = v2.y;
+        this.scene = scene;
         this.renderer = renderer;
         this.camera = camera;
         this.raycaster = raycaster;
         this.zoompower = zoompower;
         this.translatepower = translatepower;
-
-        this.#ratio = this.height / this.width;
 
         this.#ismousedown = false;
         this.#mousepos = [null, null];
@@ -42,7 +37,6 @@ class MouseControl {
         this.#diffwheel = 0;
         this.#wheeltimeout = null;
 
-        console.log(this.renderer)
         this.#initMouseEvents();
     }
 
@@ -61,9 +55,6 @@ class MouseControl {
                     self.#difftranslate[1] + e.pageY - self.#mousepos[1]];
             }
             self.#mousepos = [e.pageX, e.pageY];
-            var temp = [( e.clientX / window.innerWidth ) * 2 - 1,  - ( e.clientY / window.innerHeight ) * 2 + 1]
-            console.log(temp)
-            self.raycaster.setFromCamera(temp, self.camera)
 
         }, false);
 
@@ -109,15 +100,33 @@ class MouseControl {
         return this.#mousepos;
     }
 
+    #getSize() {
+        const v2 = new THREE.Vector2();
+        this.renderer.getDrawingBufferSize(v2);
+        return v2;
+    }
+
+    #updateRaycaster() {
+
+        const size = this.#getSize();
+
+        var [mx,my] = this.#mousepos;
+        var tmp = new THREE.Vector2( 2*mx/size.x/.8 - 1,  - 2*my/size.y/.8 + 1);
+        this.raycaster.setFromCamera(tmp, this.camera);
+    }
+
     /**
      * Updates self for translation
      **/
     #updateTranslate() {
 
+        const size = this.#getSize();
+
         var [tx,ty] = this.#difftranslate;
-        var tx = tx/this.width;
-        var ty = ty/this.width;
-        var c = this.camera.position.z * this.translatepower;
+        var tx = tx/size.x;
+        var ty = ty/size.x;
+
+        var c = this.translatepower;
         this.camera.position.x -= tx * c;
         this.camera.position.y += ty * c;
 
@@ -128,21 +137,20 @@ class MouseControl {
      * Updates self for Zoom
      **/
     #updateZoom() {
-        
-        var zoom = this.#diffwheel;
-        zoom /= this.height;
-        zoom *= this.zoompower;
-        var [mx,my] = this.#mousepos;
-        var mx = mx/this.width  - 0.5; // Scale to [-0.5, 0.5]
-        var my = my/this.height - 0.5;
-        mx /= this.#ratio
 
-        var fov = this.camera.fov;
-        var c = Math.tan(fov/2*Math.PI/180) * 2;
-        this.camera.position.x -= zoom * mx * c;
-        this.camera.position.y += zoom * my * c;
-        this.camera.position.z += zoom;
+        const size = this.#getSize();
         
+        var zoom = -this.#diffwheel;
+        zoom /= size.y;
+        zoom *= this.zoompower;
+        
+        this.#updateRaycaster();
+        const ray = this.raycaster.ray.direction;
+
+        this.camera.position.x += zoom * ray.x;
+        this.camera.position.y += zoom * ray.y;
+        this.camera.position.z += zoom * ray.z;
+
         this.#diffwheel = 0
     }
 
@@ -159,8 +167,5 @@ class MouseControl {
         // Implement zoom
         if (this.#iswheel)
             this.#updateZoom();
-
-        // Implement camera constraints
-        this.camera.position.z = Math.max(0, this.camera.position.z);
     }
 }

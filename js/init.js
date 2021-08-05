@@ -29,7 +29,6 @@ function init() {
     initStars();
     initPostProcessing();
     initGUI();
-    
 
     animate();
 }
@@ -49,10 +48,10 @@ function initBase() {
 
     //Raycaster
     raycaster = new THREE.Raycaster();
-    raycaster.params.Points.threshold = 0.1
+    raycaster.params.Points.threshold = 0.1;
 
     //Mouse Control
-    mouse = new MouseControl(renderer, camera, raycaster);
+    mouse = new MouseControl(renderer, camera, raycaster, scene);
 
     // Lights
     const pointLight = new THREE.PointLight(0xFFFFFF);
@@ -160,13 +159,10 @@ var animate = function () {
 };
 
 window.onresize = function() {
-    var windowHalfX = window.innerWidth / 2;
-    var windowHalfY = window.innerHeight / 2;
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
 
     renderer.setSize( window.innerWidth, window.innerHeight );
-    
 }
 
 // const onMouseMove = (event) => {
