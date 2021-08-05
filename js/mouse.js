@@ -8,11 +8,12 @@ class MouseControl {
      * constructor
      * @param {THREE.WebGLRenderer} renderer {Renderer of the THREEjs application}
      * @param {THREE.PerspectiveCamera} camera {Camera of the THREEjs application}
+     * @param {THREE.Raycaster} raycaster
+     * @param {THREE.Scene} scene 
      * @param {float} zoompower {Controls the zoom sensitivity (default 5)}
      * @param {float} translatepower {controls the translate sensitivity (default 5)}
      **/
 
-    #ratio;
     #ismousedown;
     #mousepos;
     #difftranslate;
@@ -20,7 +21,7 @@ class MouseControl {
     #diffwheel;
     #wheeltimeout; // tracks if wheel is activated
 
-    constructor(renderer, camera, raycaster, scene, zoompower=10, translatepower=50) {
+    constructor(renderer, camera, raycaster, scene, zoompower=10, translatepower=20) {
 
         this.scene = scene;
         this.renderer = renderer;
@@ -30,8 +31,8 @@ class MouseControl {
         this.translatepower = translatepower;
 
         this.#ismousedown = false;
-        this.#mousepos = [null, null];
-        this.#difftranslate = [null, null];
+        this.#mousepos = new THREE.Vector2(0,0);
+        this.#difftranslate = new THREE.Vector2(0,0);
 
         this.#iswheel = false;
         this.#diffwheel = 0;
@@ -50,11 +51,11 @@ class MouseControl {
 
         this.renderer.domElement.addEventListener('mousemove', function (e) {
             if (self.#ismousedown) {
-                self.#difftranslate = [
-                    self.#difftranslate[0] + e.pageX - self.#mousepos[0], 
-                    self.#difftranslate[1] + e.pageY - self.#mousepos[1]];
+                self.#difftranslate.x += e.pageX - self.#mousepos.x;
+                self.#difftranslate.y += e.pageY - self.#mousepos.y;
             }
-            self.#mousepos = [e.pageX, e.pageY];
+            self.#mousepos.x = e.pageX;
+            self.#mousepos.y = e.pageY;
 
         }, false);
 
@@ -64,8 +65,8 @@ class MouseControl {
 
         this.renderer.domElement.addEventListener('mouseup', function (e) {
             self.#ismousedown = false;
-            self.#difftranslate = [0,0];
-
+            self.#difftranslate.x = 0;
+            self.#difftranslate.y = 0;
         }, false);
 
         this.renderer.domElement.addEventListener("wheel", function(e) {
@@ -94,24 +95,30 @@ class MouseControl {
 
     /**
      * Gets current mouse position scaled to this.renderer size
-     * @returns {Tuple[float,float]} {Position of mouse}
+     * @returns THREE.Vector2 {Position of mouse}
      **/
     getCurrentMousePos() {
         return this.#mousepos;
     }
 
+    /**
+     * Gets DOM element size
+     * @returns THREE.Vector2 {Position of mouse}
+     **/
     #getSize() {
-        const v2 = new THREE.Vector2();
-        this.renderer.getDrawingBufferSize(v2);
-        return v2;
+        var box = this.renderer.domElement.getBoundingClientRect();
+        return new THREE.Vector2(box.width, box.height);
     }
 
+    /**
+     * Updates this.raycaster according to mouse position
+     **/
     #updateRaycaster() {
 
         const size = this.#getSize();
 
-        var [mx,my] = this.#mousepos;
-        var tmp = new THREE.Vector2( 2*mx/size.x/.8 - 1,  - 2*my/size.y/.8 + 1);
+        var m = this.#mousepos;
+        var tmp = new THREE.Vector2( 2*m.x/size.x - 1,  - 2*m.y/size.y + 1);
         this.raycaster.setFromCamera(tmp, this.camera);
     }
 
@@ -122,15 +129,16 @@ class MouseControl {
 
         const size = this.#getSize();
 
-        var [tx,ty] = this.#difftranslate;
-        var tx = tx/size.x;
-        var ty = ty/size.x;
+        var t = this.#difftranslate;
+        t.x /= size.x;
+        t.y /= size.x;
 
         var c = this.translatepower;
-        this.camera.position.x -= tx * c;
-        this.camera.position.y += ty * c;
+        this.camera.position.x -= t.x * c;
+        this.camera.position.y += t.y * c;
 
-        this.#difftranslate = [0,0];
+        this.#difftranslate.x = 0;
+        this.#difftranslate.y = 0;
     }
 
     /**
@@ -151,7 +159,7 @@ class MouseControl {
         this.camera.position.y += zoom * ray.y;
         this.camera.position.z += zoom * ray.z;
 
-        this.#diffwheel = 0
+        this.#diffwheel = 0;
     }
 
     /**
